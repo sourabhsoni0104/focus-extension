@@ -1,0 +1,10 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "types": ["chrome"]
+  },
+  "include": [".wxt/wxt.d.ts", "**/*.ts"],
+  "exclude": ["node_modules", ".output"]
+}
