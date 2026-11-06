@@ -3,6 +3,7 @@ import type { Settings } from '../../lib/defaults';
 import { h, replaceChildren } from '../../lib/dom';
 import { compactNumber, duration, relativeTime } from '../../lib/format';
 import { allowlistEmpty, keywordMatches } from '../../lib/match';
+import { updatePath } from '../../lib/settings';
 import { safeSend, type Ctx, type Mod } from './ctx';
 import { HOME_PRIMARY } from './selectors';
 
@@ -86,6 +87,7 @@ function reasonText(ctx: Ctx): string {
 }
 
 async function renderHidden(ctx: Ctx, el: HTMLElement) {
+  el.dataset.view = 'hidden';
   const stat = h('div', { class: 'fh-stat' });
   replaceChildren(
     el,
@@ -112,6 +114,7 @@ async function renderHidden(ctx: Ctx, el: HTMLElement) {
 let renderToken = 0;
 async function renderCustom(ctx: Ctx, el: HTMLElement) {
   const s = ctx.s;
+  el.dataset.view = 'custom';
   const token = ++renderToken;
   const ids = s.allow.channels.map((c) => c.id).filter((x): x is string => !!x);
   const missing = s.allow.channels.length - ids.length;
@@ -150,6 +153,45 @@ async function renderCustom(ctx: Ctx, el: HTMLElement) {
   );
 }
 
+// Allowlist mode filters YouTube's own recommendations, which often contain none of the allowed channels.
+// When every card was rejected, say so instead of leaving a blank page.
+const HOME_CARDS = 'ytd-browse[page-subtype="home"] ytd-rich-item-renderer';
+
+function allowlistNote(ctx: Ctx) {
+  const judged = document.querySelectorAll(`${HOME_CARDS}[data-focus-key]`).length;
+  const empty =
+    judged > 0 &&
+    !document.querySelector(`${HOME_CARDS}[data-focus-ok]`) &&
+    !document.querySelector(`${HOME_CARDS}[data-focus-hide="pending"]`);
+  const existing = document.getElementById('focus-home');
+  if (existing && (!empty || existing.dataset.view !== 'allow-empty')) existing.remove();
+  if (!empty) return;
+  const el = container();
+  const sig = `allow-empty|${ctx.version}`;
+  if (!el || el.dataset.sig === sig) return;
+  el.dataset.view = 'allow-empty';
+  el.dataset.sig = sig;
+  const hasChannels = ctx.s.allow.channels.length > 0;
+  replaceChildren(
+    el,
+    h('div', { class: 'fh-empty' },
+      h('h2', null, 'Nothing from your allowlist here'),
+      h('p', null,
+        hasChannels
+          ? "YouTube's recommendations don't include any of your allowed channels right now. My channels feed shows their latest uploads directly."
+          : "YouTube's recommendations don't match any of your allowed keywords or categories right now.",
+      ),
+      h('div', { class: 'fh-links' },
+        hasChannels
+          ? h('button', { class: 'fh-btn', onclick: () => void updatePath('focus.homeMode', 'custom').catch(() => undefined) }, 'Use My channels feed')
+          : null,
+        h('a', { href: '/feed/subscriptions' }, 'Subscriptions'),
+        h('button', { class: 'fh-btn', onclick: openOptions('home') }, 'Edit allowlist'),
+      ),
+    ),
+  );
+}
+
 let lastSig = '';
 export const home: Mod = {
   navigate(ctx) {
@@ -165,8 +207,9 @@ export const home: Mod = {
     const root = document.documentElement;
     if (view === 'feed') {
       root.removeAttribute('focus-home-replaced');
-      document.getElementById('focus-home')?.remove();
       lastSig = '';
+      if (ctx.page === 'home' && ctx.s.enabled && ctx.s.focus.homeMode === 'allowlist') allowlistNote(ctx);
+      else document.getElementById('focus-home')?.remove();
       return;
     }
     root.setAttribute('focus-home-replaced', '');

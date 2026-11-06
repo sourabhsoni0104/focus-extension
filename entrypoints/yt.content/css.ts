@@ -1,5 +1,6 @@
 // Builds the injected stylesheet from the effective settings.
 import type { Settings } from '../../lib/defaults';
+import { allowlistEmpty } from '../../lib/match';
 import { buttonByLabel, THUMBS } from './selectors';
 
 const hide = (sels: string[]) => (sels.length ? `${sels.join(',\n')} { display: none !important; }\n` : '');
@@ -185,6 +186,9 @@ export function buildCss(s: Settings): string {
   if (f.hideSearchClutter)
     out.push('ytd-search ytd-shelf-renderer', 'ytd-search ytd-horizontal-card-list-renderer', 'ytd-search grid-shelf-view-model');
   if (f.homeMode !== 'normal') out.push('ytd-browse[page-subtype="home"] ytd-rich-section-renderer');
+  // Allowlist home: cards stay hidden until the filter approves them, so rejected ones never flash.
+  if (f.homeMode === 'allowlist' && !allowlistEmpty(s))
+    out.push('html[focus-page="home"] ytd-browse[page-subtype="home"] ytd-rich-item-renderer:not([data-focus-ok])');
   // Hidden / custom home: our own #focus-home replaces YouTube's feed.
   out.push(
     'html[focus-home-replaced] ytd-browse[page-subtype="home"] ytd-rich-grid-renderer',

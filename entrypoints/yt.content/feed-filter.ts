@@ -178,10 +178,15 @@ export const feedFilter: Mod = {
       if (verdict === 'pending' && item.videoId) requestMeta(ctx, item.videoId);
       if (verdict === 'pending' && !item.videoId) verdict = 'show';
       el.dataset.focusKey = key;
+      // data-focus-ok marks approved cards; in allowlist mode the home grid only shows those (see css.ts).
       if (verdict === 'show') {
         el.removeAttribute('data-focus-hide');
+        el.dataset.focusOk = '';
         decorate(ctx, card, item);
-      } else el.dataset.focusHide = verdict;
+      } else {
+        el.dataset.focusHide = verdict;
+        delete el.dataset.focusOk;
+      }
     }
   },
 };
