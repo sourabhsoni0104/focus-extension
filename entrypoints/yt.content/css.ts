@@ -89,23 +89,28 @@ html.focus-cinema #player-theater-container, html.focus-cinema ytd-watch-flexy #
 }
 #focus-home { display: none; }
 html[focus-page="home"] #focus-home { display: block; }
+/* Own colors: YouTube's --yt-spec-* variables are not reliably defined any more. */
 #focus-home {
-  padding: 24px 16px 48px; color: var(--yt-spec-text-primary, #0f0f0f);
+  --fh-text: #0f0f0f; --fh-muted: #606060; --fh-chip: rgba(0,0,0,.05); --fh-chip-hover: rgba(0,0,0,.1);
+  padding: 24px 16px 48px; color: var(--fh-text);
   font-family: Roboto, Arial, sans-serif;
+}
+html[dark] #focus-home {
+  --fh-text: #f1f1f1; --fh-muted: #aaaaaa; --fh-chip: rgba(255,255,255,.1); --fh-chip-hover: rgba(255,255,255,.2);
 }
 #focus-home .fh-empty { max-width: 520px; margin: 10vh auto 0; text-align: center; }
 #focus-home .fh-empty h2 { font-size: 24px; font-weight: 600; margin: 0 0 8px; }
-#focus-home .fh-empty p { font-size: 15px; color: var(--yt-spec-text-secondary, #606060); margin: 0 0 20px; line-height: 1.5; }
+#focus-home .fh-empty p { font-size: 15px; color: var(--fh-muted); margin: 0 0 20px; line-height: 1.5; }
 #focus-home .fh-links { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 #focus-home .fh-links a, #focus-home .fh-btn {
-  padding: 8px 16px; border-radius: 18px; background: var(--yt-spec-badge-chip-background, rgba(0,0,0,.05));
+  padding: 8px 16px; border-radius: 18px; background: var(--fh-chip);
   color: inherit; text-decoration: none; font-size: 14px; font-weight: 500; border: 0; cursor: pointer;
 }
-#focus-home .fh-links a:hover, #focus-home .fh-btn:hover { background: var(--yt-spec-button-chip-background-hover, rgba(0,0,0,.1)); }
-#focus-home .fh-stat { margin-top: 28px; font-size: 13px; color: var(--yt-spec-text-secondary, #606060); }
+#focus-home .fh-links a:hover, #focus-home .fh-btn:hover { background: var(--fh-chip-hover); }
+#focus-home .fh-stat { margin-top: 28px; font-size: 13px; color: var(--fh-muted); }
 #focus-home .fh-head { display: flex; align-items: baseline; justify-content: space-between; margin: 0 0 16px; }
 #focus-home .fh-head h2 { font-size: 20px; margin: 0; }
-#focus-home .fh-head span { font-size: 13px; color: var(--yt-spec-text-secondary, #606060); }
+#focus-home .fh-head span { font-size: 13px; color: var(--fh-muted); }
 #focus-home .fh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 32px 16px; }
 #focus-home .fh-card { color: inherit; text-decoration: none; display: block; }
 #focus-home .fh-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; display: block; background: rgba(127,127,127,.15); }
@@ -113,7 +118,7 @@ html[focus-page="home"] #focus-home { display: block; }
   font-size: 16px; font-weight: 500; line-height: 22px; margin: 10px 0 4px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-#focus-home .fh-card p { font-size: 14px; color: var(--yt-spec-text-secondary, #606060); margin: 0; }
+#focus-home .fh-card p { font-size: 14px; color: var(--fh-muted); margin: 0; }
 #focus-limit {
   position: fixed; inset: 0; z-index: 100000; background: rgba(10,10,12,.96); color: #fff;
   display: flex; align-items: center; justify-content: center; font-family: Roboto, Arial, sans-serif;
