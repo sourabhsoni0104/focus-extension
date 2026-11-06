@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULTS, deepMerge, setPath, withDefaults, type Settings } from '../lib/defaults';
 import { effectiveSettings, inSchedule } from '../lib/effective';
-import { badgeText, hostOf, parseDuration, pomoBadge } from '../lib/format';
+import { badgeText, clockText, countdownText, hostOf, parseDuration, pomoBadge } from '../lib/format';
 import { categoryIdByName } from '../lib/categories';
 import { allowlistEmpty, chipFits, judge, keywordMatches, pageOf, parseChannelHref, type FeedItem } from '../lib/match';
 import { isLoosening } from '../lib/ui/components';
@@ -41,6 +41,19 @@ describe('format', () => {
   it('extracts hosts', () => {
     expect(hostOf('https://www.youtube.com/watch?v=x')).toBe('youtube.com');
     expect(hostOf('chrome://extensions')).toBeNull();
+  });
+});
+
+describe('flip clock text', () => {
+  it('formats countdowns and the wall clock', () => {
+    expect(countdownText(25 * 60000)).toBe('25:00');
+    expect(countdownText(59_001)).toBe('01:00');
+    expect(countdownText(0)).toBe('00:00');
+    expect(countdownText(-5)).toBe('00:00');
+    expect(countdownText(65 * 60000)).toBe('1:05:00');
+    expect(clockText(new Date(2026, 0, 1, 21, 5), false)).toBe('21:05');
+    expect(clockText(new Date(2026, 0, 1, 21, 5), true)).toBe('09:05');
+    expect(clockText(new Date(2026, 0, 1, 0, 0), true)).toBe('12:00');
   });
 });
 

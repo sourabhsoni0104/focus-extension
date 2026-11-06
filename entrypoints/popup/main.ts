@@ -251,6 +251,33 @@ function minutesField(path: 'work' | 'short' | 'long', label: string, max: numbe
   return h('label', { class: 'pomo-field' }, h('span', null, label), h('span', { class: 'num' }, input, 'min'));
 }
 
+// ---------------- Screen off (full-screen flip clock) ----------------
+
+// A popup-type window has no tabs or address bar; the clock page switches it to full screen itself.
+async function openScreenOff(hash: string) {
+  await chrome.windows.create({ url: chrome.runtime.getURL(`/clock.html#${hash}`), type: 'popup', focused: true });
+  window.close();
+}
+
+function screenOffSection() {
+  return h('div', { class: 'screen-off' },
+    h('div', { class: 'so-head' }, h('strong', null, 'Screen off'), h('small', null, 'Black full screen with a flip clock. Esc to exit.')),
+    h('div', { class: 'so-row' },
+      h('button', { class: 'btn small', onclick: () => void openScreenOff('clock') }, 'Clock'),
+      h('button', {
+        class: 'btn small',
+        onclick: async () => {
+          // The screen-off Pomodoro also starts the session if it is not running yet.
+          const p = await send('pomo:get', {});
+          if (p.status === 'idle') await send('pomo:action', { action: 'start' });
+          await openScreenOff('pomodoro');
+        },
+      }, 'Pomodoro'),
+      h('button', { class: 'btn small', onclick: () => void openScreenOff('timer') }, 'Timer'),
+    ),
+  );
+}
+
 async function renderPomodoro(sec: HTMLElement) {
   // The timer redraws every second; the duration fields live outside it so typing isn't interrupted.
   const timer = h('div');
@@ -263,6 +290,7 @@ async function renderPomodoro(sec: HTMLElement) {
       minutesField('long', 'Long break', 120),
     ),
     h('p', { class: 'pomo-note' }, 'New times apply to the next session (or right away when the timer is reset).'),
+    screenOffSection(),
   );
   const tick = async () => {
     if (tab !== 'pomodoro') return clearInterval(pomoTimer);

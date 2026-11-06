@@ -74,3 +74,21 @@ export function pomoBadge(ms: number): string {
   const min = Math.ceil(ms / 60000);
   return min < 100 ? `${min}m` : `${Math.floor(min / 60)}h`;
 }
+
+/** Countdown for the flip clock: "24:59", or "1:05:00" from an hour up. Rounds up so it shows 00:00 only at the end. */
+export function countdownText(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** Wall clock for the flip clock: "09:41" (12-hour) or "21:41" (24-hour). */
+export function clockText(d: Date, hour12: boolean): string {
+  let h = d.getHours();
+  if (hour12) h = h % 12 || 12;
+  return `${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
