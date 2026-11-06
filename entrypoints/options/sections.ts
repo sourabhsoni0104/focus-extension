@@ -89,7 +89,7 @@ const apiKeyField: Field = {
     });
     return {
       el: h('div', { class: 'block' },
-        h('div', { class: 'label' }, h('span', null, 'YouTube Data API key'), h('small', null, 'Used only for category filtering, original titles and channel lookups. Stored on this device.')),
+        h('div', { class: 'label' }, h('span', null, 'YouTube Data API key'), h('small', null, 'Optional. Speeds up category filtering and enables original titles and channel lookups. Stored on this device.')),
         h('div', { class: 'add' }, input, save),
         status,
         h('ol', { class: 'steps' },
@@ -209,7 +209,7 @@ export const SECTIONS: Section[] = [
         title: 'Allow on homepage',
         fields: [
           { kind: 'channels', path: 'allow.channels', label: 'Channels' },
-          { kind: 'categories', path: 'allow.categories', label: 'Categories', hint: 'Needs an API key. Videos in these categories are allowed.' },
+          { kind: 'categories', path: 'allow.categories', label: 'Categories', hint: 'Videos in these categories are allowed (uses each video’s own category, e.g. Music or Education).' },
           { kind: 'keywords', path: 'allow.keywords', label: 'Keywords', hint: 'Videos whose title or channel contains any of these are allowed.' },
         ],
       },

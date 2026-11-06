@@ -1,4 +1,6 @@
 // YouTube Data API v3: video categories and per-video metadata (category + original title), cached.
+// Without a key, the category list is built in and per-video categories are looked up on the page (yt.content/video-category.ts).
+import { VIDEO_CATEGORIES } from '../../lib/categories';
 import { loadSettings } from '../../lib/settings';
 import type { VideoMeta } from '../../lib/types';
 
@@ -23,6 +25,7 @@ interface CatResponse {
 
 export async function listCategories(force = false): Promise<{ id: string; title: string }[]> {
   const { api } = await loadSettings();
+  if (!api.youtubeKey) return VIDEO_CATEGORIES;
   const cacheKey = `yt_cats_${api.region}`;
   const cached = (await chrome.storage.local.get(cacheKey))[cacheKey] as { at: number; list: { id: string; title: string }[] } | undefined;
   if (!force && cached && Date.now() - cached.at < CATS_TTL) return cached.list;

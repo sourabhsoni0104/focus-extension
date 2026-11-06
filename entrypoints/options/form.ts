@@ -165,10 +165,6 @@ export function renderField(f: Field, api: FormApi): Bound {
         }));
       };
       const load = async () => {
-        if (!api.get().api.youtubeKey) {
-          replaceChildren(grid, h('span', { class: 'faint' }, 'Add a YouTube API key (in "YouTube API") to filter by category.'));
-          return;
-        }
         try {
           cats = await send('yt:categories', {});
           draw((val(f.path) as string[]) ?? []);

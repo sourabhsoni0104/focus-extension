@@ -62,6 +62,8 @@ export const DISLIKE_BUTTON = [
 export const CHANNEL_HEADER_NAME = 'yt-page-header-renderer h1, #page-header h1, ytd-c4-tabbed-header-renderer #channel-name #text';
 export const HOME_PRIMARY = 'ytd-browse[page-subtype="home"] ytd-two-column-browse-results-renderer #primary, ytd-browse[page-subtype="home"] #primary';
 export const ANTI_ADBLOCK = 'ytd-enforcement-message-view-model';
+/** Home feed chips ("All", "Music", …). The selected one has [selected]; the first is always "All". */
+export const HOME_CHIPS = 'ytd-browse[page-subtype="home"] yt-chip-cloud-chip-renderer';
 export const SKIP_CHIP = 'yt-chip-cloud-chip-renderer, ytd-feed-filter-chip-bar-renderer yt-chip-cloud-chip-renderer';
 
 /** Hide the outermost element matching a list, e.g. buttons by aria-label. */

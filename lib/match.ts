@@ -1,4 +1,5 @@
 // Pure feed-filtering logic (unit tested).
+import { VIDEO_CATEGORIES } from './categories';
 import type { ChannelRef, Settings } from './defaults';
 
 export interface FeedItem {
@@ -78,12 +79,34 @@ export interface JudgeContext {
   page: Page;
   /** Category id for a video; undefined = not known yet. */
   category?: string;
-  /** Whether category lookups are possible (API key set). */
+  /** Whether this page needs category lookups (category rules are set). */
   categoriesEnabled: boolean;
+  /** The selected home chip (topic) fits the allowlist, so everything in it is allowed. */
+  topicAllowed?: boolean;
+}
+
+/** Below this many videos with a known category, a chip can only fit by its name. */
+export const CHIP_MIN_SAMPLE = 5;
+/** Share of a chip's videos that must be in allowed categories for the whole chip to be allowed. */
+export const CHIP_MIN_SHARE = 0.6;
+
+/**
+ * Whether a home-feed chip like "Music" or "Indian pop music" fits the allowlist:
+ * its name matches an allowed category, channel or keyword, or most of its videos are in allowed categories.
+ */
+export function chipFits(s: Settings, chip: string, videoCategories: string[]): boolean {
+  const name = norm(chip);
+  if (!name) return false;
+  const allowedTitles = VIDEO_CATEGORIES.filter((c) => s.allow.categories.includes(c.id)).map((c) => c.title.toLowerCase());
+  if (allowedTitles.includes(name)) return true;
+  if (keywordMatches(s.allow.keywords, chip) || inChannelList(s.allow.channels, { name: chip })) return true;
+  const known = videoCategories.filter(Boolean);
+  if (!s.allow.categories.length || known.length < CHIP_MIN_SAMPLE) return false;
+  return known.filter((c) => s.allow.categories.includes(c)).length / known.length >= CHIP_MIN_SHARE;
 }
 
 export function allowlistEmpty(s: Settings): boolean {
-  return !s.allow.channels.length && !s.allow.keywords.length && !(s.api.youtubeKey && s.allow.categories.length);
+  return !s.allow.channels.length && !s.allow.keywords.length && !s.allow.categories.length;
 }
 
 export function judge(item: FeedItem, ctx: JudgeContext): Verdict {
@@ -112,6 +135,7 @@ export function judge(item: FeedItem, ctx: JudgeContext): Verdict {
   if (f.hideWatched && page !== 'channel' && item.watchedPct >= f.watchedThreshold) return 'hide';
 
   if (page === 'home' && f.homeMode === 'allowlist') {
+    if (ctx.topicAllowed) return 'show';
     if (inChannelList(s.allow.channels, ch)) return 'show';
     if (keywordMatches(s.allow.keywords, text)) return 'show';
     if (ctx.categoriesEnabled && s.allow.categories.length) {

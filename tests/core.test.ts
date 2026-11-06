@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULTS, deepMerge, setPath, withDefaults, type Settings } from '../lib/defaults';
 import { effectiveSettings, inSchedule } from '../lib/effective';
 import { badgeText, hostOf, parseDuration } from '../lib/format';
-import { allowlistEmpty, judge, keywordMatches, pageOf, parseChannelHref, type FeedItem } from '../lib/match';
+import { categoryIdByName } from '../lib/categories';
+import { allowlistEmpty, chipFits, judge, keywordMatches, pageOf, parseChannelHref, type FeedItem } from '../lib/match';
 import { isLoosening } from '../lib/ui/components';
 import { addTime, BUCKET_MS, prune, summarize, sumByDomain, type Buckets } from '../entrypoints/background/screentime-core';
 import { advance, initialState, pause, start } from '../entrypoints/background/pomodoro-core';
@@ -104,7 +105,24 @@ describe('matching', () => {
   it('knows when the allowlist is empty', () => {
     expect(allowlistEmpty(S())).toBe(true);
     expect(allowlistEmpty(S({ allow: { keywords: ['x'] } }))).toBe(false);
-    expect(allowlistEmpty(S({ allow: { categories: ['27'] } }))).toBe(true); // no API key
+    expect(allowlistEmpty(S({ allow: { categories: ['27'] } }))).toBe(false); // works without an API key
+  });
+  it('allows a home chip that fits the allowlist', () => {
+    const s = S({ focus: { homeMode: 'allowlist' }, allow: { categories: ['10'] } });
+    expect(chipFits(s, 'Music', [])).toBe(true); // name = allowed category
+    expect(chipFits(s, 'Indian pop music', ['10', '10', '10', '10', '24'])).toBe(true); // 80% Music
+    expect(chipFits(s, 'Gaming', ['20', '20', '20', '10', '20'])).toBe(false);
+    expect(chipFits(s, 'Nusrat Fateh Ali Khan', ['10', '10'])).toBe(false); // too few known yet
+    expect(chipFits(S({ allow: { keywords: ['nusrat'] } }), 'Nusrat Fateh Ali Khan', [])).toBe(true);
+    const ctx = { settings: s, page: 'home' as const, categoriesEnabled: true, topicAllowed: true };
+    expect(judge(item(), ctx)).toBe('show');
+    expect(judge(item({ isMix: true }), ctx)).toBe('hide'); // "Hide Mixes" still applies
+  });
+  it('maps category names to ids', () => {
+    expect(categoryIdByName('Music')).toBe('10');
+    expect(categoryIdByName(' education ')).toBe('27');
+    expect(categoryIdByName('Nope')).toBe('');
+    expect(categoryIdByName(undefined)).toBe('');
   });
 });
 

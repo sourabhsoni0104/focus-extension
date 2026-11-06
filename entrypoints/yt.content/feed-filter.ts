@@ -1,8 +1,9 @@
 // Filters video cards (allowlist/blocklist/categories) and applies DeArrow / original titles to them.
 import { parseDuration } from '../../lib/format';
-import { allowlistEmpty, judge, parseChannelHref, type FeedItem } from '../../lib/match';
+import { allowlistEmpty, chipFits, judge, parseChannelHref, type FeedItem } from '../../lib/match';
 import type { Branding, VideoMeta } from '../../lib/types';
 import { safeSend, type Ctx, type Mod } from './ctx';
+import { keylessMeta } from './video-category';
 import * as S from './selectors';
 
 const meta = new Map<string, VideoMeta>();
@@ -69,7 +70,7 @@ function requestMeta(ctx: Ctx, id: string) {
   metaTimer = setTimeout(async () => {
     const ids = [...wantMeta];
     wantMeta.clear();
-    const got = await safeSend('yt:videos', { ids });
+    const got = ctx.s.api.youtubeKey ? await safeSend('yt:videos', { ids }) : await keylessMeta(ids);
     for (const id of ids) meta.set(id, got?.[id] ?? { c: '', t: '' });
     ctx.rescan();
   }, 150);
@@ -150,6 +151,29 @@ function decorate(ctx: Ctx, card: Element, item: ReturnType<typeof extract>) {
   setThumb(card, id, ctx.s.community.dearrowThumbs ? brandings.get(id)?.thumbTime ?? undefined : undefined);
 }
 
+/** Text of the selected home chip, or '' when it is "All" (the first chip) or there are no chips. */
+function selectedChip(): string {
+  const chips = [...document.querySelectorAll(S.HOME_CHIPS)];
+  const i = chips.findIndex((c) => c.hasAttribute('selected') || c.querySelector('button[aria-selected="true"]'));
+  return i > 0 ? text(chips[i]) : '';
+}
+
+// Chips that already fit stay allowed while more videos load, so shown videos don't disappear again.
+const fittingChips = new Set<string>();
+
+function topicAllowed(ctx: Ctx, chip: string, list: Element[]): boolean {
+  const memo = `${ctx.version}|${chip}`;
+  if (fittingChips.has(memo)) return true;
+  const cats = list.flatMap((card) => {
+    const id = videoIdOf(card.querySelector(S.ITEM_LINK)?.getAttribute('href')).id;
+    const c = id ? meta.get(id)?.c : undefined;
+    return c ? [c] : [];
+  });
+  if (!chipFits(ctx.s, chip, cats)) return false;
+  fittingChips.add(memo);
+  return true;
+}
+
 export const feedFilter: Mod = {
   scan(ctx) {
     const s = ctx.s;
@@ -161,20 +185,23 @@ export const feedFilter: Mod = {
     if (page === 'other') return;
     const homeReplaced = page === 'home' && (s.focus.homeMode === 'hidden' || s.focus.homeMode === 'custom' || (s.focus.homeMode === 'allowlist' && allowlistEmpty(s)));
     if (homeReplaced) return;
-    const categoriesEnabled = !!s.api.youtubeKey;
-    const needCategories = categoriesEnabled && (s.block.categories.length > 0 || (page === 'home' && s.focus.homeMode === 'allowlist' && s.allow.categories.length > 0));
+    const needCategories = s.block.categories.length > 0 || (page === 'home' && s.focus.homeMode === 'allowlist' && s.allow.categories.length > 0);
 
-    for (const card of cards()) {
+    const list = cards();
+    const chip = page === 'home' && s.focus.homeMode === 'allowlist' ? selectedChip() : '';
+    const topicOk = !!chip && topicAllowed(ctx, chip, list);
+
+    for (const card of list) {
       const item = extract(card);
       const el = card as HTMLElement;
-      const key = `${ctx.version}|${item.videoId ?? item.title}|${item.channelName ?? ''}`;
+      const key = `${ctx.version}|${chip}:${topicOk}|${item.videoId ?? item.title}|${item.channelName ?? ''}`;
       const prev = el.dataset.focusKey;
       if (prev === key && el.dataset.focusHide !== 'pending') {
         if (el.dataset.focusHide === undefined) decorate(ctx, card, item);
         continue;
       }
       const category = item.videoId ? meta.get(item.videoId)?.c : undefined;
-      let verdict = judge(item, { settings: s, page, category, categoriesEnabled: needCategories });
+      let verdict = judge(item, { settings: s, page, category, categoriesEnabled: needCategories, topicAllowed: topicOk });
       if (verdict === 'pending' && item.videoId) requestMeta(ctx, item.videoId);
       if (verdict === 'pending' && !item.videoId) verdict = 'show';
       el.dataset.focusKey = key;
