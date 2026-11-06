@@ -10,6 +10,14 @@ import { domainTime, refresh, resetData, setIdleInterval, setupScreenTime, summa
 import { listCategories, testKey, videoMeta } from './youtube-api';
 
 const TICK = 'tick';
+// While a Pomodoro runs, refresh the badge every 30s so its countdown stays current.
+const POMO_BADGE = 'pomo-badge';
+
+async function syncPomoBadgeAlarm() {
+  const p = await getPomo();
+  if (p.status === 'running') await chrome.alarms.create(POMO_BADGE, { periodInMinutes: 0.5 });
+  else await chrome.alarms.clear(POMO_BADGE);
+}
 
 async function applyAdRules(s: Settings) {
   const on = s.enabled && s.ads.enabled && s.ads.network;
@@ -25,7 +33,10 @@ export default defineBackground(() => {
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes[POMO_KEY]) void updateBadge();
+    if (area === 'local' && changes[POMO_KEY]) {
+      void updateBadge();
+      void syncPomoBadgeAlarm();
+    }
   });
 
   let prev: Settings | null = null;
@@ -79,6 +90,7 @@ export default defineBackground(() => {
     const p = await getPomo();
     if (p.status === 'running' && p.endsAt <= Date.now()) await onPomoAlarm();
     else if (p.status === 'running') await chrome.alarms.create(POMO_ALARM, { when: p.endsAt });
+    await syncPomoBadgeAlarm();
     await updateBadge();
   })();
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULTS, deepMerge, setPath, withDefaults, type Settings } from '../lib/defaults';
 import { effectiveSettings, inSchedule } from '../lib/effective';
-import { badgeText, hostOf, parseDuration } from '../lib/format';
+import { badgeText, hostOf, parseDuration, pomoBadge } from '../lib/format';
 import { categoryIdByName } from '../lib/categories';
 import { allowlistEmpty, chipFits, judge, keywordMatches, pageOf, parseChannelHref, type FeedItem } from '../lib/match';
 import { isLoosening } from '../lib/ui/components';
@@ -41,6 +41,16 @@ describe('format', () => {
   it('extracts hosts', () => {
     expect(hostOf('https://www.youtube.com/watch?v=x')).toBe('youtube.com');
     expect(hostOf('chrome://extensions')).toBeNull();
+  });
+});
+
+describe('pomodoro badge', () => {
+  it('shows minutes left, rounded up', () => {
+    expect(pomoBadge(25 * 60000)).toBe('25m');
+    expect(pomoBadge(24 * 60000 + 1)).toBe('25m');
+    expect(pomoBadge(30000)).toBe('1m');
+    expect(pomoBadge(0)).toBe('0m');
+    expect(pomoBadge(150 * 60000)).toBe('2h');
   });
 });
 

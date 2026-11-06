@@ -67,3 +67,10 @@ export function hostOf(url: string | undefined): string | null {
     return null;
   }
 }
+
+/** Minutes left, rounded up ("25m"), so the badge never reads 0 while time remains. */
+export function pomoBadge(ms: number): string {
+  if (ms <= 0) return '0m';
+  const min = Math.ceil(ms / 60000);
+  return min < 100 ? `${min}m` : `${Math.floor(min / 60)}h`;
+}

@@ -238,10 +238,35 @@ function renderPomo(sec: HTMLElement, p: PomoState) {
   );
 }
 
+function minutesField(path: 'work' | 'short' | 'long', label: string, max: number) {
+  const input = h('input', { type: 'number', min: 1, max, value: String(settings.pomodoro[path]), 'aria-label': `${label} minutes` });
+  input.addEventListener('change', () => {
+    const n = Math.round(Number(input.value));
+    if (!Number.isFinite(n) || n < 1 || n > max) {
+      input.value = String(settings.pomodoro[path]);
+      return;
+    }
+    void setPath(`pomodoro.${path}`, n);
+  });
+  return h('label', { class: 'pomo-field' }, h('span', null, label), h('span', { class: 'num' }, input, 'min'));
+}
+
 async function renderPomodoro(sec: HTMLElement) {
+  // The timer redraws every second; the duration fields live outside it so typing isn't interrupted.
+  const timer = h('div');
+  replaceChildren(
+    sec,
+    timer,
+    h('div', { class: 'pomo-durations' },
+      minutesField('work', 'Focus', 180),
+      minutesField('short', 'Short break', 60),
+      minutesField('long', 'Long break', 120),
+    ),
+    h('p', { class: 'pomo-note' }, 'New times apply to the next session (or right away when the timer is reset).'),
+  );
   const tick = async () => {
     if (tab !== 'pomodoro') return clearInterval(pomoTimer);
-    renderPomo(sec, await send('pomo:get', {}));
+    renderPomo(timer, await send('pomo:get', {}));
   };
   await tick();
   clearInterval(pomoTimer);

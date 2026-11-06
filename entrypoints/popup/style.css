@@ -39,3 +39,8 @@ footer { display: flex; justify-content: space-between; padding: 8px 16px 12px; 
 /* Screen time */
 .st-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
 .st-total { font-size: 28px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.pomo-durations { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.pomo-field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--muted); }
+.pomo-field .num { display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
+.pomo-field input[type='number'] { width: 60px; }
+.pomo-note { margin: 8px 0 0; font-size: 12px; color: var(--faint); text-align: center; }
