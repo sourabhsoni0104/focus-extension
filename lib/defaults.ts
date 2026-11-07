@@ -21,6 +21,8 @@ export const SB_CATEGORIES = [
   'filler',
 ] as const;
 export type SbCategory = (typeof SB_CATEGORIES)[number];
+/** What happens when playback reaches a SponsorBlock segment. */
+export type SbAction = 'button' | 'auto' | 'off';
 
 export interface Settings {
   enabled: boolean;
@@ -79,7 +81,7 @@ export interface Settings {
   ads: { enabled: boolean; network: boolean; prune: boolean; autoSkip: boolean; cosmetic: boolean; antiAdblock: boolean };
   community: {
     sponsorblock: boolean;
-    sbCategories: Record<SbCategory, boolean>;
+    sbActions: Record<SbCategory, SbAction>;
     sbShowBar: boolean;
     dislikes: boolean;
     dearrowTitles: boolean;
@@ -171,15 +173,15 @@ export const DEFAULTS: Settings = {
   ads: { enabled: true, network: true, prune: true, autoSkip: true, cosmetic: true, antiAdblock: true },
   community: {
     sponsorblock: true,
-    sbCategories: {
-      sponsor: true,
-      selfpromo: true,
-      interaction: true,
-      intro: false,
-      outro: false,
-      preview: false,
-      music_offtopic: true,
-      filler: false,
+    sbActions: {
+      sponsor: 'button',
+      selfpromo: 'auto',
+      interaction: 'auto',
+      intro: 'button',
+      outro: 'button',
+      preview: 'off',
+      music_offtopic: 'auto',
+      filler: 'off',
     },
     sbShowBar: true,
     dislikes: true,

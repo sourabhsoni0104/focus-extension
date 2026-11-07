@@ -313,9 +313,14 @@ export const SECTIONS: Section[] = [
       {
         title: 'SponsorBlock',
         fields: [
-          { kind: 'toggle', path: 'community.sponsorblock', label: 'Skip segments automatically' },
+          { kind: 'toggle', path: 'community.sponsorblock', label: 'Use SponsorBlock', hint: 'Community-marked sponsors, intros, outros and more' },
           { kind: 'toggle', path: 'community.sbShowBar', label: 'Show segments on the progress bar' },
-          ...SB_CATEGORIES.map((c): Field => ({ kind: 'toggle', path: `community.sbCategories.${c}`, label: SB_LABELS[c] ?? c })),
+          ...SB_CATEGORIES.map((c): Field => ({
+            kind: 'select',
+            path: `community.sbActions.${c}`,
+            label: SB_LABELS[c] ?? c,
+            options: [['button', 'Show a Skip button'], ['auto', 'Skip automatically'], ['off', 'Ignore']],
+          })),
         ],
       },
       {

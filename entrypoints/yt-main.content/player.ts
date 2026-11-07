@@ -47,6 +47,28 @@ export function startPlayer(get: () => Settings) {
   let boundVideo: HTMLVideoElement | null = null;
   let boost = 1;
 
+  // Speed and boost the user picks stay for the next videos in this tab (autoplay, playlists, clicked
+  // recommendations), and survive a reload. A saved per-channel speed still wins.
+  const CARRY_KEY = 'focus_carry';
+  let carry: { speed?: number; boost?: number } = {};
+  try {
+    carry = JSON.parse(sessionStorage.getItem(CARRY_KEY) ?? '{}') as typeof carry;
+  } catch {
+    carry = {};
+  }
+  function remember(patch: typeof carry) {
+    carry = { ...carry, ...patch };
+    try {
+      sessionStorage.setItem(CARRY_KEY, JSON.stringify(carry));
+    } catch {
+      /* not saved */
+    }
+  }
+  // True from when a new video starts loading until we've applied our settings to it,
+  // so YouTube's own rate resets in between aren't taken as the user's choice.
+  let switching = false;
+  let lastDefaultSpeed = get().player.defaultSpeed;
+
   function ensureGraph(video: HTMLVideoElement): boolean {
     if (boundVideo === video && gain) return true;
     if (!navigator.userActivation?.hasBeenActive) return false; // AudioContext needs a user gesture
@@ -62,14 +84,15 @@ export function startPlayer(get: () => Settings) {
     }
   }
 
-  function setBoost(v: number, show = false) {
+  function setBoost(v: number, byUser = false) {
     boost = Math.min(6, Math.max(1, round(v)));
+    if (byUser) remember({ boost });
     const video = getVideo();
     if (video && (boost > 1 || gain) && ensureGraph(video) && gain) {
       gain.gain.value = boost;
       if (audioCtx?.state === 'suspended') void audioCtx.resume();
     }
-    if (show) toast(`Volume boost ${Math.round(boost * 100)}%`);
+    if (byUser) toast(`Volume boost ${Math.round(boost * 100)}%`);
     publish();
   }
 
@@ -82,16 +105,17 @@ export function startPlayer(get: () => Settings) {
   document.addEventListener('keydown', onGesture, true);
 
   // --- speed ---
-  function setRate(rate: number, show: boolean) {
+  function setRate(rate: number, byUser: boolean) {
     const video = getVideo();
     const player = getPlayer();
     if (!video || isAd()) return;
     rate = Math.min(16, Math.max(0.1, round(rate)));
     targetRate = rate;
+    if (byUser) remember({ speed: rate });
     if (rate !== 1) lastNonDefault = rate;
     if (player?.setPlaybackRate && player.getAvailablePlaybackRates?.().includes(rate)) player.setPlaybackRate(rate);
     video.playbackRate = rate;
-    if (show) toast(`${rate}x`);
+    if (byUser) toast(`${rate}x`);
     publish();
   }
 
@@ -99,6 +123,7 @@ export function startPlayer(get: () => Settings) {
     const p = s.player;
     const perChannel = v.channelId ? p.channelSpeeds[v.channelId] : undefined;
     if (perChannel) return perChannel;
+    if (carry.speed !== undefined) return carry.speed;
     if (p.musicNormalSpeed && v.category === 'Music') return 1;
     return p.defaultSpeed;
   }
@@ -170,20 +195,24 @@ export function startPlayer(get: () => Settings) {
       speed: getVideo()?.playbackRate ?? 1,
       boost,
     };
-    if (!s.enabled) return publish();
+    if (!s.enabled) {
+      switching = false;
+      return publish();
+    }
     if (isNew || getVideo()?.playbackRate === 16) {
       setRate(speedFor(s, current), false);
       enforceUntil = Date.now() + 2500;
       if (isNew) {
-        boost = s.player.volumeBoost;
-        setBoost(boost);
+        setBoost(carry.boost ?? s.player.volumeBoost);
         applyQuality(s);
         applyOriginalAudio(s, pr);
       }
     }
+    switching = false;
     publish();
   }
 
+  document.addEventListener('loadstart', (e) => e.target instanceof HTMLVideoElement && !isAd() && (switching = true), true);
   document.addEventListener('loadedmetadata', (e) => e.target instanceof HTMLVideoElement && onVideoLoaded(), true);
   document.addEventListener('yt-navigate-finish', () => setTimeout(onVideoLoaded, 300));
   document.addEventListener('playing', (e) => e.target instanceof HTMLVideoElement && !current && onVideoLoaded(), true);
@@ -195,8 +224,9 @@ export function startPlayer(get: () => Settings) {
       const v = e.target;
       if (!(v instanceof HTMLVideoElement) || isAd()) return;
       if (Date.now() < enforceUntil && Math.abs(v.playbackRate - targetRate) > 0.01) v.playbackRate = targetRate;
-      else if (Math.abs(v.playbackRate - targetRate) > 0.01) {
+      else if (!switching && Math.abs(v.playbackRate - targetRate) > 0.01) {
         targetRate = v.playbackRate; // changed via YouTube's own menu
+        remember({ speed: targetRate });
         publish();
       }
     },
@@ -276,6 +306,9 @@ export function startPlayer(get: () => Settings) {
     },
     onSettings() {
       const s = get();
+      // A new default speed in the options replaces the carried-over one.
+      if (s.player.defaultSpeed !== lastDefaultSpeed) remember({ speed: undefined });
+      lastDefaultSpeed = s.player.defaultSpeed;
       if (!current || !s.enabled) return;
       const want = speedFor(s, current);
       if (want !== targetRate && Math.abs((getVideo()?.playbackRate ?? 1) - targetRate) < 0.01) setRate(want, false);

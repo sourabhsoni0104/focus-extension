@@ -1,6 +1,6 @@
-// SponsorBlock skipping + progress-bar segments, Return YouTube Dislike counts, DeArrow/original title on the watch page.
-import { SB_CATEGORIES } from '../../lib/defaults';
-import { h, toast } from '../../lib/dom';
+// SponsorBlock skipping (automatic or via a floating Skip button) + progress-bar segments, Return YouTube Dislike counts, DeArrow/original title on the watch page.
+import { SB_CATEGORIES, type SbCategory } from '../../lib/defaults';
+import { h, icon, replaceChildren, toast } from '../../lib/dom';
 import { compactNumber } from '../../lib/format';
 import type { SbSegment } from '../../lib/types';
 import { getVideoEl, safeSend, type Ctx, type Mod } from './ctx';
@@ -28,11 +28,57 @@ const SB_LABELS: Record<string, string> = {
   filler: 'filler',
 };
 
+const SKIP_LABELS: Record<string, string> = {
+  sponsor: 'Skip sponsor',
+  selfpromo: 'Skip self-promo',
+  interaction: 'Skip reminder',
+  intro: 'Skip intro',
+  outro: 'Skip outro',
+  preview: 'Skip preview',
+  music_offtopic: 'Skip non-music',
+  filler: 'Skip filler',
+};
+const SKIP_ICON = 'M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z';
+
 let segments: SbSegment[] = [];
 let segmentsFor = '';
 const skipped = new Set<string>();
 const undone = new Set<string>();
 let votes: { id: string; dislikes: number } | null = null;
+
+// --- floating Skip button (bottom right of the player while inside a segment) ---
+let skipBtn: HTMLButtonElement | null = null;
+let offered: SbSegment | null = null;
+
+function offerSkip(seg: SbSegment | null) {
+  const host = document.querySelector('#movie_player');
+  if (!seg || !host) {
+    offered = null;
+    skipBtn?.classList.remove('show');
+    return;
+  }
+  if (seg.uuid === offered?.uuid && skipBtn?.parentElement === host) return;
+  offered = seg;
+  if (!skipBtn) {
+    skipBtn = h('button', { id: 'focus-skip', type: 'button' });
+    const stop = (e: Event) => e.stopPropagation(); // keep YouTube from treating the click as play/pause
+    skipBtn.addEventListener('mousedown', stop);
+    skipBtn.addEventListener('dblclick', stop);
+    skipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const v = getVideoEl();
+      if (v && offered) v.currentTime = offered.end;
+      offerSkip(null);
+    });
+  }
+  replaceChildren(skipBtn, h('span', null, SKIP_LABELS[seg.category] ?? 'Skip'), icon(SKIP_ICON, 20));
+  if (skipBtn.parentElement !== host) {
+    skipBtn.classList.remove('show');
+    host.appendChild(skipBtn);
+  }
+  const btn = skipBtn;
+  requestAnimationFrame(() => offered && btn.classList.add('show'));
+}
 
 export function installSponsorSkip(get: () => Ctx) {
   document.addEventListener(
@@ -40,11 +86,16 @@ export function installSponsorSkip(get: () => Ctx) {
     (e) => {
       const v = e.target;
       const ctx = get();
-      if (!(v instanceof HTMLVideoElement) || !segments.length || !ctx.s.enabled || !ctx.s.community.sponsorblock) return;
-      if (document.querySelector('#movie_player.ad-showing') || segmentsFor !== ctx.video?.videoId) return;
+      if (!(v instanceof HTMLVideoElement)) return;
+      const off = !segments.length || !ctx.s.enabled || !ctx.s.community.sponsorblock;
+      if (off || document.querySelector('#movie_player.ad-showing') || segmentsFor !== ctx.video?.videoId) return offerSkip(null);
       const t = v.currentTime;
+      let offer: SbSegment | null = null;
       for (const seg of segments) {
-        if (t >= seg.start && t < seg.end - 0.3 && !skipped.has(seg.uuid) && !undone.has(seg.uuid)) {
+        if (t < seg.start || t >= seg.end - 0.3) continue;
+        const action = ctx.s.community.sbActions[seg.category as SbCategory];
+        if (action === 'button') offer ??= seg;
+        else if (action === 'auto' && !skipped.has(seg.uuid) && !undone.has(seg.uuid)) {
           skipped.add(seg.uuid);
           v.currentTime = seg.end;
           toast(`Skipped ${SB_LABELS[seg.category] ?? seg.category}`, {
@@ -58,6 +109,7 @@ export function installSponsorSkip(get: () => Ctx) {
           break;
         }
       }
+      offerSkip(offer);
     },
     true,
   );
@@ -102,7 +154,9 @@ function drawBar(ctx: Ctx) {
 }
 
 function drawDislikes(ctx: Ctx) {
-  const btn = document.querySelector(DISLIKE_BUTTON);
+  // Only the button under the video: the full-screen like/dislike pill in the player has no room for a count.
+  const btn = [...document.querySelectorAll(DISLIKE_BUTTON)].find((b) => !b.closest('#movie_player'));
+  document.querySelectorAll('#movie_player .focus-dislikes').forEach((el) => el.remove());
   const existing = document.querySelector<HTMLElement>('.focus-dislikes');
   const show = ctx.s.enabled && ctx.s.community.dislikes && votes && votes.id === ctx.video?.videoId;
   if (!show || !btn) {
@@ -128,11 +182,12 @@ export const community: Mod = {
     const c = ctx.s.community;
     skipped.clear();
     undone.clear();
+    offerSkip(null);
     segments = [];
     segmentsFor = v.videoId;
     votes = null;
     if (c.sponsorblock) {
-      const cats = SB_CATEGORIES.filter((k) => c.sbCategories[k]);
+      const cats = SB_CATEGORIES.filter((k) => c.sbActions[k] !== 'off');
       const segs = await safeSend('sb:segments', { videoId: v.videoId, categories: [...cats] });
       if (segmentsFor === v.videoId) segments = segs ?? [];
     }

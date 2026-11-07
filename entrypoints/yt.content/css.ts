@@ -70,15 +70,29 @@ body > #focus-toast { position: fixed; top: 80px; z-index: 9999; }
   background: #fff; color: #111; border: 0; border-radius: 12px; padding: 3px 10px;
   font: 600 13px Roboto, Arial, sans-serif; cursor: pointer;
 }
-#focus-controls { display: inline-flex; align-items: center; height: 100%; vertical-align: top; }
-#focus-controls .ytp-button {
-  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 100%;
-  color: #fff; opacity: .9;
+#focus-skip {
+  position: absolute; right: 16px; bottom: 76px; z-index: 61;
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px 10px 18px;
+  background: rgba(15,15,18,.82); color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 8px;
+  font: 600 15px/1 Roboto, Arial, sans-serif; cursor: pointer;
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity .2s, transform .2s, bottom .2s, background .15s, color .15s;
 }
-#focus-controls .ytp-button:hover { opacity: 1; }
-#focus-controls svg { width: 22px; height: 22px; }
-#focus-controls .focus-speed { width: auto; min-width: 40px; padding: 0 6px; font: 600 13px Roboto, Arial, sans-serif; }
-#focus-controls .focus-ab { width: auto; padding: 0 6px; font: 600 12px Roboto, Arial, sans-serif; }
+#focus-skip.show { opacity: 1; transform: none; pointer-events: auto; }
+#focus-skip:hover { background: #fff; color: #0f0f0f; }
+#movie_player.ytp-autohide #focus-skip { bottom: 28px; }
+/* Full screen: sit above YouTube's like/dislike buttons in the bottom-right corner. */
+#movie_player.ytp-fullscreen #focus-skip { bottom: 160px; right: 28px; padding: 14px 18px 14px 24px; font-size: 18px; }
+#movie_player.ytp-small-mode #focus-skip { bottom: 12px; right: 8px; padding: 6px 8px 6px 10px; font-size: 12px; }
+#focus-controls { display: inline-flex; align-items: center; height: 100%; vertical-align: top; }
+/* Same size as YouTube's own control buttons (48px wide, 24px icons). */
+#focus-controls .ytp-button {
+  display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 100%;
+  color: #fff; opacity: 1;
+}
+#focus-controls .ytp-button svg { width: 24px !important; height: 24px !important; }
+#focus-controls .focus-speed { width: auto; min-width: 48px; padding: 0 8px; font: 500 15px Roboto, Arial, sans-serif; }
+#focus-controls .focus-ab { width: auto; min-width: 48px; padding: 0 8px; font: 500 14px Roboto, Arial, sans-serif; }
 #focus-controls .focus-on { color: #ff4e45; opacity: 1; }
 .focus-sb-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; pointer-events: none; z-index: 35; }
 .focus-sb-bar > div { position: absolute; top: 0; height: 100%; opacity: .85; }
@@ -151,7 +165,6 @@ export function buildCss(s: Settings): string {
       '.ytp-autonav-endscreen-upnext-container',
       '.ytp-fullscreen-grid',
       '.ytp-fullscreen-grid-stills-container',
-      '.ytp-next-button',
     );
   if (f.hideEndCards) out.push('.ytp-ce-element', '.ytp-cards-teaser', '.ytp-cards-button', '.iv-branding');
   if (f.hideComments) out.push('ytd-watch-flexy #comments', 'ytd-comments#comments');
