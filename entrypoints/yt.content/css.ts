@@ -151,7 +151,6 @@ export function buildCss(s: Settings): string {
       '.ytp-autonav-endscreen-upnext-container',
       '.ytp-fullscreen-grid',
       '.ytp-fullscreen-grid-stills-container',
-      '.ytp-fullscreen-grid-peeking',
       '.ytp-next-button',
     );
   if (f.hideEndCards) out.push('.ytp-ce-element', '.ytp-cards-teaser', '.ytp-cards-button', '.iv-branding');
